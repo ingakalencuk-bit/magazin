@@ -1,0 +1,1528 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Продуктовый магазин: Учет товаров и продаж</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, sans-serif; background: #fdf0f5; color: #3a1f2b; }
+  #app { display: flex; min-height: 100vh; }
+
+  #login {
+    position: fixed; inset: 0; background: #a8325f;
+    display: flex; align-items: center; justify-content: center; z-index: 999;
+  }
+  .login-box {
+    background: #fff; padding: 30px 40px; border-radius: 10px;
+    width: 360px; box-shadow: 0 10px 30px rgba(168,50,95,.4);
+    border-top: 5px solid #e75480;
+  }
+  .login-box h1 { font-size: 20px; margin-bottom: 20px; text-align: center; color: #a8325f; }
+  .login-box label { display: block; font-size: 13px; margin: 10px 0 4px; color: #7a4a5c; }
+  .login-box input, .login-box select {
+    width: 100%; padding: 8px; border: 1px solid #e8b4c8; border-radius: 5px; font-size: 14px;
+    background: #fff7fa;
+  }
+  .login-box input:focus, .login-box select:focus { outline: 2px solid #f4a7c0; }
+  .login-box button {
+    width: 100%; margin-top: 18px; padding: 10px; background: #e75480; color: #fff;
+    border: none; border-radius: 5px; font-size: 15px; cursor: pointer;
+  }
+  .login-box button:hover { background: #c93d67; }
+  .login-hint { font-size: 12px; color: #b07a8e; margin-top: 12px; text-align: center; }
+
+  aside {
+    width: 240px; background: #a8325f; color: #ffe3ec; padding: 20px 0; flex-shrink: 0;
+  }
+  aside h2 { font-size: 15px; padding: 0 20px 15px; border-bottom: 1px solid #c14a76; color: #fff; }
+  aside .user-info { padding: 12px 20px; font-size: 12px; color: #f0b8cc; border-bottom: 1px solid #c14a76; }
+  aside .user-info b { color: #fff; }
+  aside nav a {
+    display: block; padding: 10px 20px; color: #ffe3ec; text-decoration: none; font-size: 14px;
+    border-left: 3px solid transparent;
+  }
+  aside nav a:hover { background: #bf3f6d; }
+  aside nav a.active { background: #bf3f6d; border-left-color: #ff9ec0; }
+  aside nav .group { padding: 14px 20px 6px; font-size: 11px; color: #f0a6c0; text-transform: uppercase; }
+  aside .logout {
+    margin: 20px; padding: 8px; width: calc(100% - 40px); background: #7a2347; color: #fff;
+    border: none; border-radius: 5px; cursor: pointer;
+  }
+  aside .logout:hover { background: #5e1a35; }
+  aside .badge {
+    display: inline-block; background: #ff9ec0; color: #5e1a35; font-size: 10px;
+    padding: 1px 6px; border-radius: 8px; margin-left: 6px; font-weight: bold;
+  }
+
+  main { flex: 1; padding: 25px; overflow-x: auto; }
+  main h1 { font-size: 22px; margin-bottom: 15px; color: #a8325f; }
+  .card {
+    background: #fff; border-radius: 8px; padding: 18px; margin-bottom: 18px;
+    box-shadow: 0 1px 4px rgba(168,50,95,.12);
+    border-top: 3px solid #f4a7c0;
+  }
+  .toolbar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; align-items: center; }
+  .toolbar input, .toolbar select {
+    padding: 7px; border: 1px solid #e8b4c8; border-radius: 5px; font-size: 13px;
+    background: #fff7fa;
+  }
+  .btn {
+    padding: 7px 14px; border: none; border-radius: 5px; cursor: pointer; font-size: 13px;
+    background: #e75480; color: #fff; text-decoration: none; display: inline-block;
+  }
+  .btn:hover { background: #c93d67; }
+  .btn.green { background: #d6336c; } .btn.green:hover { background: #b02a58; }
+  .btn.red { background: #9e2a4d; } .btn.red:hover { background: #7a1f3b; }
+  .btn.gray { background: #c98aa3; } .btn.gray:hover { background: #b06f8a; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { padding: 8px; border-bottom: 1px solid #f5d6e2; text-align: left; }
+  th { background: #fce4ef; color: #a8325f; font-weight: bold; }
+  tr:hover td { background: #fff5f9; }
+  .status { padding: 2px 8px; border-radius: 10px; font-size: 11px; display: inline-block; }
+  .st-active { background: #fbd5e3; color: #a8325f; }
+  .st-out { background: #f9d6c4; color: #a04a1e; }
+  .st-exp { background: #e0c2ea; color: #6b2178; }
+  .st-off { background: #d9d9d9; color: #555; }
+  .low { color: #c0143c; font-weight: bold; }
+  .empty { color: #b07a8e; font-style: italic; padding: 15px; }
+  .deleted-row td { opacity: 0.55; text-decoration: line-through; }
+
+  .modal-bg {
+    position: fixed; inset: 0; background: rgba(90,20,50,.55); display: none;
+    align-items: center; justify-content: center; z-index: 500;
+  }
+  .modal-bg.show { display: flex; }
+  .modal {
+    background: #fff; padding: 22px; border-radius: 8px; width: 700px; max-height: 90vh; overflow-y: auto;
+    border-top: 5px solid #e75480;
+  }
+  .modal h3 { margin-bottom: 14px; color: #a8325f; }
+  .modal label { display: block; font-size: 12px; margin: 8px 0 3px; color: #7a4a5c; }
+  .modal input, .modal select, .modal textarea {
+    width: 100%; padding: 7px; border: 1px solid #e8b4c8; border-radius: 5px; font-size: 13px;
+    background: #fff7fa;
+  }
+  .modal .actions { margin-top: 16px; display: flex; gap: 10px; justify-content: flex-end; }
+
+  .items-table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+  .items-table th, .items-table td { padding: 5px; border-bottom: 1px solid #f5d6e2; font-size: 12px; }
+  .items-table th { background: #fce4ef; color: #a8325f; }
+  .items-table .item-select { width: 100%; padding: 5px; border: 1px solid #e8b4c8; border-radius: 4px; background: #fff7fa; font-size: 12px; }
+  .items-table .qty-input { width: 70px; padding: 5px; border: 1px solid #e8b4c8; border-radius: 4px; background: #fff7fa; font-size: 12px; }
+  .items-table .date-input { width: 130px; padding: 5px; border: 1px solid #e8b4c8; border-radius: 4px; background: #fff7fa; font-size: 12px; }
+  .items-table .price-cell { color: #a8325f; font-weight: bold; }
+  .add-line-btn { margin-top: 8px; padding: 6px 12px; font-size: 12px; }
+  .warn { color: #c0143c; font-size: 12px; margin-top: 6px; }
+
+  .row { display: flex; gap: 15px; flex-wrap: wrap; }
+  .col { flex: 1; min-width: 180px; }
+  .stat-box { background: #fce4ef; padding: 14px; border-radius: 6px; text-align: center; }
+  .stat-box .num { font-size: 26px; font-weight: bold; color: #c93d67; }
+  .stat-box .lbl { font-size: 12px; color: #8a5567; margin-top: 4px; }
+
+  /* ===== ДИАГРАММЫ ===== */
+  .chart-box {
+    background: #fff;
+    border-radius: 8px;
+    padding: 16px;
+    margin-top: 16px;
+    border: 1px solid #f5d6e2;
+  }
+  .chart-title {
+    font-size: 14px;
+    font-weight: bold;
+    color: #a8325f;
+    margin-bottom: 12px;
+  }
+  .bars { display: flex; align-items: flex-end; height: 220px; gap: 12px; padding: 0 10px; border-bottom: 2px solid #e8b4c8; }
+  .bar-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; min-width: 40px; height: 100%; }
+  .bar {
+    width: 100%;
+    max-width: 60px;
+    background: linear-gradient(180deg, #f4a7c0 0%, #e75480 100%);
+    border-radius: 4px 4px 0 0;
+    animation: growUp 0.9s ease-out;
+    transform-origin: bottom;
+    position: relative;
+  }
+  .bar-val {
+    font-size: 11px;
+    color: #a8325f;
+    font-weight: bold;
+    margin-bottom: 4px;
+    opacity: 0;
+    animation: fadeIn 0.6s ease-out 0.7s forwards;
+  }
+  .bar-lbl {
+    font-size: 11px;
+    color: #7a4a5c;
+    margin-top: 6px;
+    text-align: center;
+    word-break: break-word;
+  }
+  @keyframes growUp {
+    from { height: 0 !important; opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .pie-wrap { display: flex; gap: 30px; align-items: center; flex-wrap: wrap; }
+  .pie-svg { flex-shrink: 0; }
+  .pie-slice { animation: pieGrow 0.9s ease-out; transform-origin: center; transform-box: fill-box; }
+  @keyframes pieGrow {
+    from { opacity: 0; transform: scale(0.3); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  .legend { display: flex; flex-direction: column; gap: 8px; font-size: 13px; }
+  .legend-item { display: flex; align-items: center; gap: 8px; animation: fadeIn 0.6s ease-out; }
+  .legend-dot { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; }
+  .legend-val { color: #a8325f; font-weight: bold; margin-left: auto; }
+
+  .print-doc { font-family: 'Courier New', monospace; font-size: 13px; background: #fff; padding: 20px; }
+  .print-doc h2 { text-align: center; margin-bottom: 12px; color: #a8325f; }
+  .print-doc .meta { display: flex; justify-content: space-between; margin-bottom: 12px; }
+  .print-doc table { margin-top: 10px; }
+  .print-doc .total { text-align: right; font-weight: bold; margin-top: 10px; }
+
+  /* ===== АДАПТИВНОСТЬ ===== */
+  .burger {
+    display: none;
+    position: fixed;
+    top: 12px;
+    left: 12px;
+    z-index: 1001;
+    width: 44px;
+    height: 44px;
+    background: #a8325f;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 22px;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(168,50,95,.4);
+  }
+  .burger:hover { background: #bf3f6d; }
+
+  .overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.5);
+    z-index: 999;
+  }
+  .overlay.show { display: block; }
+
+  @media (max-width: 900px) {
+    .burger { display: block; }
+
+    aside {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 100vh;
+      width: 260px;
+      z-index: 1000;
+      transform: translateX(-100%);
+      transition: transform 0.25s ease;
+      overflow-y: auto;
+      box-shadow: 2px 0 12px rgba(0,0,0,.3);
+    }
+    aside.open { transform: translateX(0); }
+
+    main {
+      padding: 70px 12px 20px;
+      width: 100%;
+    }
+    main h1 { font-size: 18px; }
+
+    .card { padding: 12px; }
+    .toolbar { gap: 6px; }
+    .toolbar input, .toolbar select { font-size: 12px; padding: 6px; flex: 1 1 100%; }
+    .btn { padding: 8px 12px; font-size: 12px; }
+
+    table { font-size: 12px; }
+    th, td { padding: 6px 4px; }
+
+    .modal {
+      width: calc(100% - 20px) !important;
+      padding: 16px;
+      max-height: 92vh;
+    }
+
+    .items-table .item-select { font-size: 11px; }
+    .items-table .qty-input { width: 55px; font-size: 11px; }
+    .items-table .date-input { width: 110px; font-size: 11px; }
+    .items-table th, .items-table td { padding: 4px 3px; }
+
+    .row { flex-direction: column; }
+    .col { min-width: 100%; }
+    .stat-box { padding: 10px; }
+    .stat-box .num { font-size: 22px; }
+
+    .bars { height: 160px; gap: 6px; padding: 0 4px; }
+    .bar-lbl { font-size: 9px; }
+    .bar-val { font-size: 10px; }
+
+    .pie-wrap { flex-direction: column; align-items: flex-start; gap: 14px; }
+    .pie-svg { width: 200px; height: 200px; }
+    .legend { font-size: 12px; }
+
+    .print-doc { font-size: 11px; padding: 12px; }
+
+    #login .login-box {
+      width: calc(100% - 40px);
+      padding: 22px;
+    }
+  }
+
+  @media (max-width: 500px) {
+    table { font-size: 11px; }
+    th, td { padding: 5px 3px; }
+    .btn { font-size: 11px; padding: 6px 8px; }
+    main h1 { font-size: 16px; }
+    .stat-box .num { font-size: 18px; }
+    .stat-box .lbl { font-size: 10px; }
+    .bars { height: 130px; }
+    .modal { padding: 12px; }
+  }
+
+  @media print { aside, .toolbar, .no-print, .burger { display: none !important; } main { padding: 0; } }
+</style>
+</head>
+<body>
+
+<div id="login">
+  <div class="login-box">
+    <h1>Продуктовый магазин</h1>
+    <label>Логин</label>
+    <input id="loginUser" placeholder="admin / tovaroved / prodavec / manager">
+    <label>Пароль</label>
+    <input id="loginPass" type="password" placeholder="любой (демо)">
+    <label>Роль</label>
+    <select id="loginRole">
+      <option value="admin">Администратор</option>
+      <option value="tovaroved">Товаровед</option>
+      <option value="prodavec">Продавец (кассир)</option>
+      <option value="manager">Менеджер</option>
+    </select>
+    <button onclick="doLogin()">Войти</button>
+    <div class="login-hint">Демо: логин = роль (admin, tovaroved, prodavec, manager), пароль любой</div>
+  </div>
+</div>
+
+<div id="app" style="display:none;">
+  <button class="burger" onclick="toggleMenu()">☰</button>
+  <div class="overlay" id="overlay" onclick="toggleMenu()"></div>
+  <aside id="sidebar">
+    <h2>Учет и управление</h2>
+    <div class="user-info">Пользователь: <b id="curUser"></b><br>Роль: <b id="curRole"></b></div>
+    <nav id="menu">
+      <div class="group">Главное</div>
+      <a href="#dashboard" data-page="dashboard">Панель</a>
+      <div class="group">Справочники</div>
+      <a href="#categories" data-page="categories">Категории</a>
+      <a href="#subcategories" data-page="subcategories">Подкатегории</a>
+      <a href="#manufacturers" data-page="manufacturers">Производители</a>
+      <a href="#units" data-page="units">Единицы измерения</a>
+      <a href="#statuses" data-page="statuses">Статусы товара</a>
+      <a href="#suppliers" data-page="suppliers">Поставщики</a>
+      <a href="#roles" data-page="roles">Роли</a>
+      <a href="#payments" data-page="payments">Способы оплаты</a>
+      <div class="group">Учет</div>
+      <a href="#products" data-page="products">Товары</a>
+      <a href="#receipts" data-page="receipts">Приходы</a>
+      <a href="#sales" data-page="sales">Продажи</a>
+      <a href="#stock" data-page="stock">Остатки (партии)</a>
+      <a href="#selection" data-page="selection">Подбор товаров</a>
+      <div class="group">Архив</div>
+      <a href="#archive" data-page="archive">Корзина <span class="badge" id="archiveCount">0</span></a>
+      <div class="group">Отчеты</div>
+      <a href="#reports" data-page="reports">Отчеты</a>
+    </nav>
+    <button class="logout" onclick="doLogout()">Выйти</button>
+  </aside>
+  <main id="content"></main>
+</div>
+
+<div class="modal-bg" id="modalBg">
+  <div class="modal" id="modalBox"></div>
+</div>
+
+<script>
+/* ==================== ДАННЫЕ ==================== */
+const DEF = {
+  categories: [
+    {id:1, name:"Продукты питания", desc:"Основной ассортимент"},
+    {id:2, name:"Напитки", desc:"Вода, соки, газировка"},
+    {id:3, name:"Бытовая химия", desc:"Средства для дома"},
+    {id:4, name:"Сопутствующие товары", desc:"Прочее"}
+  ],
+  subcategories: [
+    {id:1, catId:1, name:"Молочные"},
+    {id:2, catId:1, name:"Мясные"},
+    {id:3, catId:1, name:"Хлебобулочные"},
+    {id:4, catId:1, name:"Кондитерские"},
+    {id:5, catId:2, name:"Соки"},
+    {id:6, catId:2, name:"Вода"},
+    {id:7, catId:2, name:"Газировка"},
+    {id:8, catId:3, name:"Чистящие средства"},
+    {id:9, catId:3, name:"Стиральные порошки"},
+    {id:10, catId:4, name:"Пакеты и упаковка"}
+  ],
+  manufacturers: [
+    {id:1, name:"Молочный дом", country:"Россия", contacts:"info@moloko.ru"},
+    {id:2, name:"Мясокомбинат №1", country:"Россия", contacts:"sales@meat.ru"},
+    {id:3, name:"Хлебзавод", country:"Россия", contacts:"hleb@mail.ru"},
+    {id:4, name:"Соковый мир", country:"Россия", contacts:"info@juice.ru"},
+    {id:5, name:"Чистый дом", country:"Россия", contacts:"info@clean.ru"},
+    {id:6, name:"АкваПром", country:"Россия", contacts:"info@aqua.ru"}
+  ],
+  units: [
+    {id:1, name:"Штука", short:"шт."},
+    {id:2, name:"Килограмм", short:"кг"},
+    {id:3, name:"Литр", short:"л"},
+    {id:4, name:"Упаковка", short:"уп."}
+  ],
+  statuses: [
+    {id:1, name:"В наличии"},
+    {id:2, name:"Отсутствует"},
+    {id:3, name:"Снят с продажи"},
+    {id:4, name:"Просрочен"}
+  ],
+  suppliers: [
+    {id:1, name:"ООО МолПром", inn:"4345001001", phone:"+7-900-111-22-33", address:"г. Киров, ул. Ленина, 1", email:"molprom@mail.ru", subcatId:1},
+    {id:2, name:"ООО МясТорг", inn:"4345001002", phone:"+7-900-222-33-44", address:"г. Киров, ул. Мира, 5", email:"myastorg@mail.ru", subcatId:2},
+    {id:3, name:"ИП Хлебов", inn:"4345001003", phone:"+7-900-333-44-55", address:"г. Киров, ул. Садовая, 10", email:"hlebov@mail.ru", subcatId:3},
+    {id:4, name:"ООО СокТорг", inn:"4345001004", phone:"+7-900-444-55-66", address:"г. Киров, ул. Вятская, 15", email:"soktorg@mail.ru", subcatId:5},
+    {id:5, name:"ООО АкваПром", inn:"4345001005", phone:"+7-900-555-66-77", address:"г. Киров, ул. Речная, 7", email:"aquaprom@mail.ru", subcatId:6}
+  ],
+  roles: [
+    {id:1, name:"Администратор", desc:"Полный доступ"},
+    {id:2, name:"Товаровед", desc:"Товары, поставщики, приходы, остатки, отчеты"},
+    {id:3, name:"Продавец", desc:"Продажи, остатки, чеки"},
+    {id:4, name:"Менеджер", desc:"Просмотр товаров и отчетов"}
+  ],
+  payments: [
+    {id:1, name:"Наличные"},
+    {id:2, name:"Банковская карта"},
+    {id:3, name:"Перевод"}
+  ],
+  products: [
+    {id:1, name:"Молоко 3,2%", subcatId:1, manufId:1, unitId:3, statusId:1, buy:45, sell:65, minStock:10, photo:"", deleted:false},
+    {id:2, name:"Кефир 1%", subcatId:1, manufId:1, unitId:3, statusId:1, buy:40, sell:58, minStock:8, photo:"", deleted:false},
+    {id:3, name:"Хлеб белый", subcatId:3, manufId:3, unitId:1, statusId:1, buy:20, sell:35, minStock:15, photo:"", deleted:false},
+    {id:4, name:"Колбаса вареная", subcatId:2, manufId:2, unitId:2, statusId:1, buy:300, sell:420, minStock:5, photo:"", deleted:false},
+    {id:5, name:"Сок яблочный 1л", subcatId:5, manufId:4, unitId:3, statusId:1, buy:50, sell:80, minStock:12, photo:"", deleted:false},
+    {id:6, name:"Сыр Российский", subcatId:1, manufId:1, unitId:2, statusId:1, buy:400, sell:560, minStock:3, photo:"", deleted:false},
+    {id:7, name:"Курица тушка", subcatId:2, manufId:2, unitId:2, statusId:1, buy:180, sell:250, minStock:10, photo:"", deleted:false},
+    {id:8, name:"Батон нарезной", subcatId:3, manufId:3, unitId:1, statusId:1, buy:25, sell:42, minStock:20, photo:"", deleted:false},
+    {id:9, name:"Печенье овсяное", subcatId:4, manufId:3, unitId:4, statusId:1, buy:60, sell:95, minStock:6, photo:"", deleted:false},
+    {id:10, name:"Вода питьевая 1,5л", subcatId:6, manufId:6, unitId:3, statusId:1, buy:25, sell:45, minStock:30, photo:"", deleted:false},
+    {id:11, name:"Средство для посуды", subcatId:8, manufId:5, unitId:1, statusId:1, buy:80, sell:130, minStock:5, photo:"", deleted:false},
+    {id:12, name:"Порошок стиральный", subcatId:9, manufId:5, unitId:4, statusId:1, buy:250, sell:380, minStock:4, photo:"", deleted:false},
+    {id:13, name:"Пакет майка", subcatId:10, manufId:5, unitId:4, statusId:1, buy:10, sell:20, minStock:50, photo:"", deleted:false},
+    {id:14, name:"Кола 0,5л", subcatId:7, manufId:6, unitId:3, statusId:1, buy:40, sell:70, minStock:15, photo:"", deleted:false}
+  ],
+  receipts: [
+    {id:1, supplierId:1, date:"2026-11-10", num:"ПН-001", items:[
+      {productId:1, qty:50, price:45, exp:"2027-01-15"},
+      {productId:2, qty:40, price:40, exp:"2027-01-10"}
+    ]}
+  ],
+  sales: [
+    {id:1, sellerId:1, paymentId:1, date:"2026-11-12", num:"ЧК-001", items:[
+      {productId:1, qty:5, price:65},
+      {productId:3, qty:2, price:35}
+    ]}
+  ],
+  batches: [
+    {id:1, productId:1, qty:50, exp:"2027-01-15", receiptId:1, receiptNum:"ПН-001"},
+    {id:2, productId:2, qty:40, exp:"2027-01-10", receiptId:1, receiptNum:"ПН-001"}
+  ],
+  nextBatchId: 3
+};
+
+function loadDB() {
+  const raw = localStorage.getItem("shopDB_v8");
+  if (raw) return JSON.parse(raw);
+  localStorage.setItem("shopDB_v8", JSON.stringify(DEF));
+  return JSON.parse(JSON.stringify(DEF));
+}
+function saveDB() { localStorage.setItem("shopDB_v8", JSON.stringify(DB)); }
+let DB = loadDB();
+
+/* ==================== ВСПОМОГАТЕЛЬНЫЕ ==================== */
+function getStock(productId) {
+  return DB.batches.filter(b => b.productId === productId && b.qty > 0)
+                   .reduce((a,b) => a + b.qty, 0);
+}
+function hasExpiredBatch(productId) {
+  const today = new Date(); today.setHours(0,0,0,0);
+  return DB.batches.some(b => {
+    if (b.productId !== productId || b.qty <= 0 || !b.exp) return false;
+    const d = new Date(b.exp);
+    return !isNaN(d) && d < today;
+  });
+}
+function getAutoStatus(p) {
+  if (p.statusId === 3) return { id: 3, name: "Снят с продажи", cls: "st-off" };
+  if (hasExpiredBatch(p.id)) return { id: 4, name: "Просрочен", cls: "st-exp" };
+  if (getStock(p.id) <= 0) return { id: 2, name: "Отсутствует", cls: "st-out" };
+  return { id: 1, name: "В наличии", cls: "st-active" };
+}
+function planFEFO(productId, needQty) {
+  const batches = DB.batches
+    .filter(b => b.productId === productId && b.qty > 0)
+    .sort((a,b) => new Date(a.exp) - new Date(b.exp));
+  const plan = [];
+  let left = needQty;
+  for (const b of batches) {
+    if (left <= 0) break;
+    const take = Math.min(b.qty, left);
+    plan.push({batchId: b.id, qty: take});
+    left -= take;
+  }
+  if (left > 0) return null;
+  return plan;
+}
+
+/* ==================== СЕССИЯ ==================== */
+let SESSION = null;
+const ROLE_NAMES = { admin:"Администратор", tovaroved:"Товаровед", prodavec:"Продавец", manager:"Менеджер" };
+const ACCESS = {
+  admin: ["dashboard","categories","subcategories","manufacturers","units","statuses","suppliers","roles","payments","products","receipts","sales","stock","selection","archive","reports"],
+  tovaroved: ["dashboard","categories","subcategories","manufacturers","units","statuses","suppliers","products","receipts","stock","selection","archive","reports"],
+  prodavec: ["dashboard","products","sales","stock","selection"],
+  manager: ["dashboard","products","stock","selection","reports"]
+};
+
+function doLogin() {
+  const role = document.getElementById("loginRole").value;
+  SESSION = { role, name: ROLE_NAMES[role] };
+  document.getElementById("curUser").textContent = ROLE_NAMES[role];
+  document.getElementById("curRole").textContent = ROLE_NAMES[role];
+  document.getElementById("login").style.display = "none";
+  document.getElementById("app").style.display = "flex";
+  buildMenu();
+  window.location.hash = "#dashboard";
+  render();
+}
+function doLogout() {
+  SESSION = null;
+  document.getElementById("app").style.display = "none";
+  document.getElementById("login").style.display = "flex";
+  window.location.hash = "";
+}
+function toggleMenu() {
+  document.getElementById("sidebar").classList.toggle("open");
+  document.getElementById("overlay").classList.toggle("show");
+}
+function buildMenu() {
+  const allowed = ACCESS[SESSION.role] || [];
+  document.querySelectorAll("#menu a").forEach(a => {
+    a.style.display = allowed.includes(a.dataset.page) ? "block" : "none";
+  });
+  updateArchiveBadge();
+}
+function updateArchiveBadge() {
+  const cnt = DB.products.filter(p=>p.deleted).length;
+  const el = document.getElementById("archiveCount");
+  if (el) el.textContent = cnt;
+}
+window.addEventListener("hashchange", () => {
+  if (SESSION) render();
+  const sb = document.getElementById("sidebar");
+  const ov = document.getElementById("overlay");
+  if (sb) sb.classList.remove("open");
+  if (ov) ov.classList.remove("show");
+});
+
+/* ==================== РОУТЕР ==================== */
+function render() {
+  const page = (window.location.hash || "#dashboard").replace("#","");
+  document.querySelectorAll("#menu a").forEach(a => {
+    a.classList.toggle("active", a.dataset.page === page);
+  });
+  const c = document.getElementById("content");
+  c.innerHTML = "";
+  switch (page) {
+    case "dashboard": renderDashboard(c); break;
+    case "categories": renderDictPage(c, "categories", "Категории товаров", [["name","Название"],["desc","Описание"]], ["name","desc"]); break;
+    case "subcategories": renderSubcatPage(c); break;
+    case "manufacturers": renderDictPage(c, "manufacturers", "Производители", [["name","Название"],["country","Страна"],["contacts","Контакты"]], ["name","country","contacts"]); break;
+    case "units": renderDictPage(c, "units", "Единицы измерения", [["name","Название"],["short","Сокращение"]], ["name","short"]); break;
+    case "statuses": renderDictPage(c, "statuses", "Статусы товара", [["name","Название"]], ["name"]); break;
+    case "suppliers": renderSuppliersPage(c); break;
+    case "roles": renderDictPage(c, "roles", "Роли пользователей", [["name","Название"],["desc","Права"]], ["name","desc"]); break;
+    case "payments": renderDictPage(c, "payments", "Способы оплаты", [["name","Название"]], ["name"]); break;
+    case "products": renderProducts(c); break;
+    case "receipts": renderReceipts(c); break;
+    case "sales": renderSales(c); break;
+    case "stock": renderStock(c); break;
+    case "selection": renderSelection(c); break;
+    case "archive": renderArchive(c); break;
+    case "reports": renderReports(c); break;
+    default: renderDashboard(c);
+  }
+}
+
+/* ==================== ПАНЕЛЬ ==================== */
+function renderDashboard(c) {
+  const active = DB.products.filter(p=>!p.deleted);
+  const lowStock = active.filter(p => getStock(p.id) < p.minStock).length;
+  const totalSales = DB.sales.reduce((s,sale)=>s+sale.items.reduce((a,i)=>a+i.qty*i.price,0),0);
+  const archived = DB.products.filter(p=>p.deleted).length;
+  const totalBatches = DB.batches.filter(b=>b.qty>0).length;
+  c.innerHTML = `<h1>Панель управления</h1>
+    <div class="row">
+      <div class="col stat-box"><div class="num">${active.length}</div><div class="lbl">Товаров</div></div>
+      <div class="col stat-box"><div class="num">${totalBatches}</div><div class="lbl">Партий на складе</div></div>
+      <div class="col stat-box"><div class="num">${DB.suppliers.length}</div><div class="lbl">Поставщиков</div></div>
+      <div class="col stat-box"><div class="num">${DB.sales.length}</div><div class="lbl">Продаж</div></div>
+      <div class="col stat-box"><div class="num">${totalSales.toFixed(0)} ₽</div><div class="lbl">Выручка (демо)</div></div>
+      <div class="col stat-box"><div class="num ${lowStock?'low':''}">${lowStock}</div><div class="lbl">Низкий остаток</div></div>
+      <div class="col stat-box"><div class="num">${archived}</div><div class="lbl">В корзине</div></div>
+    </div>
+    <div class="card" style="margin-top:18px">
+      <h3 style="margin-bottom:10px; color:#a8325f;">Быстрые ссылки</h3>
+      <div class="toolbar">
+        <a class="btn" href="#products">Товары</a>
+        <a class="btn" href="#receipts">Оформить приход</a>
+        <a class="btn green" href="#sales">Оформить продажу</a>
+        <a class="btn gray" href="#stock">Партии</a>
+        <a class="btn gray" href="#archive">Корзина</a>
+        <a class="btn gray" href="#reports">Отчеты</a>
+      </div>
+    </div>`;
+}
+
+/* ==================== СПРАВОЧНИКИ ==================== */
+function renderDictPage(c, key, title, cols, fieldKeys) {
+  const canEdit = ["admin","tovaroved"].includes(SESSION.role);
+  let html = `<h1>${title}</h1><div class="card"><div class="toolbar">`;
+  if (canEdit) html += `<button class="btn green" onclick="openDictForm('${key}')">+ Добавить</button>`;
+  html += `</div>`;
+  if (!DB[key].length) {
+    html += `<div class="empty">Нет записей. Нажмите «Добавить», чтобы создать первую.</div>`;
+  } else {
+    html += `<table><tr>${cols.map(c2=>`<th>${c2[1]}</th>`).join("")}${canEdit?'<th>Действия</th>':''}</tr>`;
+    DB[key].forEach(row => {
+      html += `<tr>${cols.map(c2=>`<td>${row[c2[0]] ?? ""}</td>`).join("")}`;
+      if (canEdit) html += `<td>
+        <button class="btn gray" onclick="openDictForm('${key}',${row.id})">Изм.</button>
+        <button class="btn red" onclick="delDict('${key}',${row.id})">Удал.</button>
+      </td>`;
+      html += `</tr>`;
+    });
+    html += `</table>`;
+  }
+  html += `</div>`;
+  c.innerHTML = html;
+}
+
+const DICT_FIELDS = {
+  categories: {name:"", desc:""},
+  manufacturers: {name:"", country:"", contacts:""},
+  units: {name:"", short:""},
+  statuses: {name:""},
+  roles: {name:"", desc:""},
+  payments: {name:""}
+};
+const DICT_LABELS = {name:"Название",desc:"Описание",country:"Страна",contacts:"Контакты",short:"Сокращение",inn:"ИНН",phone:"Телефон",address:"Адрес",email:"Email"};
+
+function openDictForm(key, id) {
+  const item = id ? DB[key].find(x=>x.id===id) : null;
+  const empty = DICT_FIELDS[key];
+  const data = item || empty;
+  let fields = "";
+  Object.keys(empty).forEach(k => {
+    fields += `<label>${DICT_LABELS[k]||k}</label><input id="f_${k}" value="${data[k]||""}">`;
+  });
+  showModal(`<h3>${id?'Редактировать':'Добавить'} запись</h3>${fields}
+    <div class="actions">
+      <button class="btn gray" onclick="closeModal()">Отмена</button>
+      <button class="btn green" onclick="saveDict('${key}',${id||'null'})">Сохранить</button>
+    </div>`);
+}
+function saveDict(key, id) {
+  const empty = DICT_FIELDS[key];
+  const obj = {};
+  Object.keys(empty).forEach(k => {
+    const el = document.getElementById("f_"+k);
+    if (el) obj[k] = el.value;
+  });
+  if (id) { Object.assign(DB[key].find(x=>x.id===id), obj); }
+  else { obj.id = Math.max(0,...DB[key].map(x=>x.id))+1; DB[key].push(obj); }
+  saveDB(); closeModal(); render();
+}
+function delDict(key, id) {
+  if (!confirm("Удалить запись из справочника?")) return;
+  DB[key] = DB[key].filter(x=>x.id!==id);
+  saveDB(); render();
+}
+
+/* ==================== ПОСТАВЩИКИ ==================== */
+function renderSuppliersPage(c) {
+  const canEdit = ["admin","tovaroved"].includes(SESSION.role);
+  let html = `<h1>Поставщики</h1><div class="card"><div class="toolbar">`;
+  if (canEdit) html += `<button class="btn green" onclick="openSupplierForm()">+ Добавить</button>`;
+  html += `</div>`;
+  if (!DB.suppliers.length) {
+    html += `<div class="empty">Нет записей</div>`;
+  } else {
+    html += `<table><tr><th>Наименование</th><th>ИНН</th><th>Телефон</th><th>Адрес</th><th>Email</th><th>Поставляет</th>${canEdit?'<th>Действия</th>':''}</tr>`;
+    DB.suppliers.forEach(s => {
+      const sc = DB.subcategories.find(x=>x.id===s.subcatId);
+      html += `<tr><td>${s.name}</td><td>${s.inn}</td><td>${s.phone}</td><td>${s.address}</td><td>${s.email}</td>
+        <td>${sc?sc.name:"—"}</td>`;
+      if (canEdit) html += `<td>
+        <button class="btn gray" onclick="openSupplierForm(${s.id})">Изм.</button>
+        <button class="btn red" onclick="delDict('suppliers',${s.id})">Удал.</button></td>`;
+      html += `</tr>`;
+    });
+    html += `</table>`;
+  }
+  html += `</div>`;
+  c.innerHTML = html;
+}
+function openSupplierForm(id) {
+  const item = id ? DB.suppliers.find(x=>x.id===id) : {name:"",inn:"",phone:"",address:"",email:"",subcatId:1};
+  showModal(`<h3>${id?'Редактировать':'Добавить'} поставщика</h3>
+    <label>Наименование</label><input id="sup_name" value="${item.name}">
+    <label>ИНН</label><input id="sup_inn" value="${item.inn}">
+    <label>Телефон</label><input id="sup_phone" value="${item.phone}">
+    <label>Адрес</label><input id="sup_address" value="${item.address}">
+    <label>Email</label><input id="sup_email" value="${item.email}">
+    <label>Какую подкатегорию поставляет</label>
+    <select id="sup_subcat">${DB.subcategories.map(sc=>`<option value="${sc.id}" ${item.subcatId==sc.id?'selected':''}>${sc.name}</option>`).join("")}</select>
+    <div class="actions"><button class="btn gray" onclick="closeModal()">Отмена</button>
+    <button class="btn green" onclick="saveSupplier(${id||'null'})">Сохранить</button></div>`);
+}
+function saveSupplier(id) {
+  const obj = {
+    name: document.getElementById("sup_name").value,
+    inn: document.getElementById("sup_inn").value,
+    phone: document.getElementById("sup_phone").value,
+    address: document.getElementById("sup_address").value,
+    email: document.getElementById("sup_email").value,
+    subcatId: +document.getElementById("sup_subcat").value
+  };
+  if (id) Object.assign(DB.suppliers.find(x=>x.id===id), obj);
+  else { obj.id = Math.max(0,...DB.suppliers.map(x=>x.id))+1; DB.suppliers.push(obj); }
+  saveDB(); closeModal(); render();
+}
+
+/* ==================== ПОДКАТЕГОРИИ ==================== */
+function renderSubcatPage(c) {
+  const canEdit = ["admin","tovaroved"].includes(SESSION.role);
+  let html = `<h1>Подкатегории товаров</h1><div class="card"><div class="toolbar">`;
+  if (canEdit) html += `<button class="btn green" onclick="openSubcatForm()">+ Добавить</button>`;
+  html += `</div>`;
+  if (!DB.subcategories.length) {
+    html += `<div class="empty">Нет записей</div>`;
+  } else {
+    html += `<table><tr><th>Название</th><th>Категория</th>${canEdit?'<th>Действия</th>':''}</tr>`;
+    DB.subcategories.forEach(s => {
+      const cat = DB.categories.find(c2=>c2.id===s.catId);
+      html += `<tr><td>${s.name}</td><td>${cat?cat.name:"—"}</td>`;
+      if (canEdit) html += `<td>
+        <button class="btn gray" onclick="openSubcatForm(${s.id})">Изм.</button>
+        <button class="btn red" onclick="delDict('subcategories',${s.id})">Удал.</button></td>`;
+      html += `</tr>`;
+    });
+    html += `</table>`;
+  }
+  html += `</div>`;
+  c.innerHTML = html;
+}
+function openSubcatForm(id) {
+  const item = id ? DB.subcategories.find(x=>x.id===id) : {catId:1,name:""};
+  showModal(`<h3>${id?'Редактировать':'Добавить'} подкатегорию</h3>
+    <label>Название</label><input id="sc_name" value="${item.name}">
+    <label>Категория</label><select id="sc_cat">${DB.categories.map(c2=>`<option value="${c2.id}" ${item.catId==c2.id?'selected':''}>${c2.name}</option>`).join("")}</select>
+    <div class="actions"><button class="btn gray" onclick="closeModal()">Отмена</button>
+    <button class="btn green" onclick="saveSubcat(${id||'null'})">Сохранить</button></div>`);
+}
+function saveSubcat(id) {
+  const name = document.getElementById("sc_name").value;
+  const catId = parseInt(document.getElementById("sc_cat").value);
+  if (id) Object.assign(DB.subcategories.find(x=>x.id===id), {name,catId});
+  else DB.subcategories.push({id:Math.max(0,...DB.subcategories.map(x=>x.id))+1,name,catId});
+  saveDB(); closeModal(); render();
+}
+
+/* ==================== ТОВАРЫ ==================== */
+function renderProducts(c) {
+  const canEdit = ["admin","tovaroved"].includes(SESSION.role);
+  const active = DB.products.filter(p=>!p.deleted);
+  c.innerHTML = `<h1>Товары</h1><div class="card">
+    <div class="toolbar">
+      ${canEdit?'<button class="btn green" onclick="openProductForm()">+ Добавить товар</button>':''}
+      <input placeholder="Поиск по названию..." oninput="filterProducts(this.value)" id="prodSearch">
+      <a class="btn gray" href="#archive">Корзина (${DB.products.filter(p=>p.deleted).length})</a>
+    </div>
+    <div id="prodTable"></div></div>`;
+  drawProducts(active);
+}
+function drawProducts(list) {
+  const canEdit = ["admin","tovaroved"].includes(SESSION.role);
+  let html = `<table><tr><th>ID</th><th>Наименование</th><th>Подкатегория</th><th>Производитель</th><th>Закупка</th><th>Продажа</th><th>Остаток</th><th>Партий</th><th>Статус</th>${canEdit?'<th>Действия</th>':''}</tr>`;
+  if (!list.length) html += `<tr><td colspan="10" class="empty">Товаров нет</td></tr>`;
+  list.forEach(p => {
+    const sc = DB.subcategories.find(x=>x.id===p.subcatId);
+    const m = DB.manufacturers.find(x=>x.id===p.manufId);
+    const auto = getAutoStatus(p);
+    const stock = getStock(p.id);
+    const batches = DB.batches.filter(b=>b.productId===p.id && b.qty>0).length;
+    const lowCls = stock < p.minStock ? "low" : "";
+    html += `<tr><td>${p.id}</td><td>${p.name}</td><td>${sc?sc.name:"—"}</td><td>${m?m.name:"—"}</td>
+      <td>${p.buy} ₽</td><td>${p.sell} ₽</td><td class="${lowCls}">${stock}</td><td>${batches}</td>
+      <td><span class="status ${auto.cls}">${auto.name}</span></td>`;
+    if (canEdit) html += `<td>
+      <button class="btn gray" onclick="openProductForm(${p.id})">Изм.</button>
+      <button class="btn red" onclick="archiveProduct(${p.id})">В корзину</button></td>`;
+    html += `</tr>`;
+  });
+  html += `</table>`;
+  document.getElementById("prodTable").innerHTML = html;
+}
+function filterProducts(q) {
+  q = q.toLowerCase();
+  drawProducts(DB.products.filter(p=>!p.deleted && p.name.toLowerCase().includes(q)));
+}
+function openProductForm(id) {
+  const item = id ? DB.products.find(x=>x.id===id) : {name:"",subcatId:1,manufId:1,unitId:1,statusId:1,buy:0,sell:0,minStock:0,photo:"",deleted:false};
+  showModal(`<h3>${id?'Редактировать':'Добавить'} товар</h3>
+    <label>Наименование</label><input id="p_name" value="${item.name}">
+    <label>Подкатегория</label><select id="p_subcat">${DB.subcategories.map(s=>`<option value="${s.id}" ${item.subcatId==s.id?'selected':''}>${s.name}</option>`).join("")}</select>
+    <label>Производитель</label><select id="p_manuf">${DB.manufacturers.map(m=>`<option value="${m.id}" ${item.manufId==m.id?'selected':''}>${m.name}</option>`).join("")}</select>
+    <label>Единица измерения</label><select id="p_unit">${DB.units.map(u=>`<option value="${u.id}" ${item.unitId==u.id?'selected':''}>${u.name}</option>`).join("")}</select>
+    <label>Статус (вручную — только «Снят с продажи»)</label>
+    <select id="p_status">
+      <option value="1" ${item.statusId==1?'selected':''}>В наличии (авто)</option>
+      <option value="3" ${item.statusId==3?'selected':''}>Снят с продажи</option>
+    </select>
+    <div class="row"><div class="col"><label>Цена закупки</label><input id="p_buy" type="number" value="${item.buy}"></div>
+    <div class="col"><label>Цена продажи</label><input id="p_sell" type="number" value="${item.sell}"></div></div>
+    <label>Мин. остаток</label><input id="p_min" type="number" value="${item.minStock}">
+    <p style="margin-top:10px; font-size:12px; color:#8a5567">
+      Срок годности указывается в каждом приходе отдельно (партионный учёт).
+    </p>
+    <div class="actions"><button class="btn gray" onclick="closeModal()">Отмена</button>
+    <button class="btn green" onclick="saveProduct(${id||'null'})">Сохранить</button></div>`);
+}
+function saveProduct(id) {
+  const obj = {
+    name: document.getElementById("p_name").value,
+    subcatId: +document.getElementById("p_subcat").value,
+    manufId: +document.getElementById("p_manuf").value,
+    unitId: +document.getElementById("p_unit").value,
+    statusId: +document.getElementById("p_status").value,
+    buy: +document.getElementById("p_buy").value,
+    sell: +document.getElementById("p_sell").value,
+    minStock: +document.getElementById("p_min").value,
+    photo: ""
+  };
+  if (id) Object.assign(DB.products.find(x=>x.id===id), obj);
+  else { obj.id = Math.max(0,...DB.products.map(x=>x.id))+1; obj.deleted = false; DB.products.push(obj); }
+  saveDB(); closeModal(); render();
+}
+function archiveProduct(id) {
+  const p = DB.products.find(x=>x.id===id);
+  if (!p) return;
+  if (!confirm(`Пометить товар «${p.name}» на удаление и переместить в корзину?`)) return;
+  p.deleted = true;
+  saveDB(); render(); updateArchiveBadge();
+}
+function restoreProduct(id) {
+  const p = DB.products.find(x=>x.id===id);
+  if (!p) return;
+  if (!confirm(`Восстановить товар «${p.name}» из корзины?`)) return;
+  p.deleted = false;
+  saveDB(); render(); updateArchiveBadge();
+}
+
+/* ==================== АРХИВ ==================== */
+function renderArchive(c) {
+  const deleted = DB.products.filter(p=>p.deleted);
+  const canEdit = ["admin","tovaroved"].includes(SESSION.role);
+  let html = `<h1>Корзина (пометки на удаление)</h1>
+    <div class="card">
+      <p style="margin-bottom:12px; color:#7a4a5c; font-size:13px">
+        Товары не удаляются физически. В корзине: <b>${deleted.length}</b>
+      </p>`;
+  if (!deleted.length) {
+    html += `<div class="empty">Корзина пуста</div>`;
+  } else {
+    html += `<table><tr><th>ID</th><th>Наименование</th><th>Подкатегория</th><th>Цена продажи</th><th>Остаток</th>${canEdit?'<th>Действия</th>':''}</tr>`;
+    deleted.forEach(p => {
+      const sc = DB.subcategories.find(x=>x.id===p.subcatId);
+      html += `<tr class="deleted-row"><td>${p.id}</td><td>${p.name}</td><td>${sc?sc.name:"—"}</td>
+        <td>${p.sell} ₽</td><td>${getStock(p.id)}</td>`;
+      if (canEdit) html += `<td><button class="btn green" onclick="restoreProduct(${p.id})">Восстановить</button></td>`;
+      html += `</tr>`;
+    });
+    html += `</table>`;
+  }
+  html += `</div>`;
+  c.innerHTML = html;
+  updateArchiveBadge();
+}
+
+/* ==================== ПРИХОДЫ ==================== */
+function renderReceipts(c) {
+  const canEdit = ["admin","tovaroved"].includes(SESSION.role);
+  c.innerHTML = `<h1>Приходные накладные</h1><div class="card">
+    <div class="toolbar">${canEdit?'<button class="btn green" onclick="openReceiptForm()">+ Оформить приход</button>':''}</div>
+    <table><tr><th>№</th><th>Дата</th><th>Поставщик</th><th>Позиций</th><th>Сумма</th><th>Действия</th></tr>
+    ${DB.receipts.map(r=>{
+      const s = DB.suppliers.find(x=>x.id===r.supplierId);
+      const sum = r.items.reduce((a,i)=>a+i.qty*i.price,0);
+      return `<tr><td>${r.num}</td><td>${r.date}</td><td>${s?s.name:"—"}</td><td>${r.items.length}</td><td>${sum} ₽</td>
+        <td><button class="btn gray" onclick="printReceipt(${r.id})">Печать</button></td></tr>`;
+    }).join("")}
+    </table></div>`;
+}
+function openReceiptForm() {
+  showModal(`<h3>Новый приход</h3>
+    <label>Поставщик</label>
+    <select id="r_supplier" onchange="onReceiptSupplierChange()">
+      ${DB.suppliers.map(s=>{
+        const sc = DB.subcategories.find(x=>x.id===s.subcatId);
+        return `<option value="${s.id}" data-subcat="${s.subcatId}">${s.name} (${sc?sc.name:"—"})</option>`;
+      }).join("")}
+    </select>
+    <label>Дата</label><input id="r_date" type="date" value="${new Date().toISOString().slice(0,10)}">
+    <label>Товары (только из подкатегории поставщика)</label>
+    <div class="warn" id="r_warn"></div>
+    <table class="items-table" id="r_itemsTable">
+      <thead><tr><th>Товар</th><th>Кол-во</th><th>Цена</th><th>Срок годн.</th><th>Сумма</th><th></th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <button class="btn gray add-line-btn" onclick="addReceiptLine()">+ Добавить строку</button>
+    <div class="actions"><button class="btn gray" onclick="closeModal()">Отмена</button>
+    <button class="btn green" onclick="saveReceipt()">Провести</button></div>`);
+  addReceiptLine();
+}
+function onReceiptSupplierChange() {
+  const tbody = document.querySelector("#r_itemsTable tbody");
+  tbody.innerHTML = "";
+  addReceiptLine();
+}
+function addReceiptLine() {
+  const sup = getSelectedSupplier();
+  if (!sup) return;
+  const allowed = DB.products.filter(p => p.subcatId === sup.subcatId && !p.deleted);
+  const warn = document.getElementById("r_warn");
+  if (!allowed.length) {
+    warn.textContent = "У этого поставщика нет доступных товаров в его подкатегории.";
+    return;
+  }
+  warn.textContent = "";
+  const tbody = document.querySelector("#r_itemsTable tbody");
+  const tr = document.createElement("tr");
+  const defaultExp = new Date(); defaultExp.setMonth(defaultExp.getMonth()+6);
+  tr.innerHTML = `
+    <td><select class="item-select" onchange="onReceiptItemChange(this)">
+      ${allowed.map(p=>`<option value="${p.id}" data-buy="${p.buy}">${p.name}</option>`).join("")}
+    </select></td>
+    <td><input class="qty-input" type="number" value="1" min="1" onchange="recalcReceiptRow(this)"></td>
+    <td><input class="qty-input" type="number" step="0.01" value="${allowed[0].buy}" onchange="recalcReceiptRow(this)"></td>
+    <td><input class="date-input" type="date" value="${defaultExp.toISOString().slice(0,10)}"></td>
+    <td class="price-cell">0 ₽</td>
+    <td><button class="btn red" style="padding:3px 8px;font-size:11px" onclick="this.closest('tr').remove()">×</button></td>
+  `;
+  tbody.appendChild(tr);
+  recalcReceiptRow(tr.querySelector(".qty-input"));
+}
+function getSelectedSupplier() {
+  const sel = document.getElementById("r_supplier");
+  if (!sel) return null;
+  return DB.suppliers.find(s=>s.id===+sel.value);
+}
+function onReceiptItemChange(select) {
+  const tr = select.closest("tr");
+  const buy = select.options[select.selectedIndex].dataset.buy;
+  tr.querySelectorAll(".qty-input")[1].value = buy;
+  recalcReceiptRow(tr.querySelector(".qty-input"));
+}
+function recalcReceiptRow(el) {
+  const tr = el.closest("tr");
+  const inputs = tr.querySelectorAll(".qty-input");
+  const qty = parseFloat(inputs[0].value) || 0;
+  const price = parseFloat(inputs[1].value) || 0;
+  tr.querySelector(".price-cell").textContent = (qty*price) + " ₽";
+}
+function saveReceipt() {
+  const sup = getSelectedSupplier();
+  if (!sup) { alert("Выберите поставщика"); return; }
+  const date = document.getElementById("r_date").value;
+  const rows = document.querySelectorAll("#r_itemsTable tbody tr");
+  const items = [];
+  for (const tr of rows) {
+    const pid = +tr.querySelector(".item-select").value;
+    const inputs = tr.querySelectorAll(".qty-input");
+    const qty = parseFloat(inputs[0].value) || 0;
+    const price = parseFloat(inputs[1].value) || 0;
+    const exp = tr.querySelector(".date-input").value;
+    const p = DB.products.find(x=>x.id===pid);
+    if (pid && qty > 0) {
+      if (!p || p.subcatId !== sup.subcatId) { alert("Товар не из подкатегории поставщика!"); return; }
+      if (p.deleted) { alert("Товар «" + p.name + "» в корзине."); return; }
+      if (!exp) { alert("Укажите срок годности для «" + p.name + "»"); return; }
+      items.push({productId:pid, qty, price, exp});
+    }
+  }
+  if (!items.length) { alert("Добавьте хотя бы один товар"); return; }
+  const id = Math.max(0,...DB.receipts.map(r=>r.id))+1;
+  const num = "ПН-"+String(id).padStart(3,"0");
+  DB.receipts.push({id, supplierId: sup.id, date, num, items});
+  items.forEach(i => {
+    DB.batches.push({
+      id: DB.nextBatchId++,
+      productId: i.productId,
+      qty: i.qty,
+      exp: i.exp,
+      receiptId: id,
+      receiptNum: num
+    });
+  });
+  saveDB(); closeModal(); render();
+}
+function printReceipt(id) {
+  const r = DB.receipts.find(x=>x.id===id);
+  const s = DB.suppliers.find(x=>x.id===r.supplierId);
+  const sum = r.items.reduce((a,i)=>a+i.qty*i.price,0);
+  let rows = r.items.map(i=>{
+    const p = DB.products.find(x=>x.id===i.productId);
+    return `<tr><td>${p?p.name:"?"}</td><td>${i.qty}</td><td>${i.price}</td><td>${i.exp}</td><td>${i.qty*i.price}</td></tr>`;
+  }).join("");
+  showModal(`<div class="print-doc"><h2>Приходная накладная ${r.num}</h2>
+    <div class="meta"><span>Дата: ${r.date}</span><span>Поставщик: ${s?s.name:"—"}</span></div>
+    <table><tr><th>Товар</th><th>Кол-во</th><th>Цена</th><th>Срок годн.</th><th>Сумма</th></tr>${rows}</table>
+    <div class="total">Итого: ${sum} ₽</div></div>
+    <div class="actions no-print"><button class="btn gray" onclick="closeModal()">Закрыть</button>
+    <button class="btn" onclick="window.print()">Печать</button></div>`);
+}
+
+/* ==================== ПРОДАЖИ ==================== */
+function renderSales(c) {
+  const canEdit = ["admin","prodavec"].includes(SESSION.role);
+  c.innerHTML = `<h1>Продажи</h1><div class="card">
+    <div class="toolbar">${canEdit?'<button class="btn green" onclick="openSaleForm()">+ Оформить продажу</button>':''}</div>
+    <table><tr><th>№ чека</th><th>Дата</th><th>Продавец</th><th>Оплата</th><th>Позиций</th><th>Сумма</th><th>Действия</th></tr>
+    ${DB.sales.map(s=>{
+      const pay = DB.payments.find(p=>p.id===s.paymentId);
+      const sum = s.items.reduce((a,i)=>a+i.qty*i.price,0);
+      return `<tr><td>${s.num}</td><td>${s.date}</td><td>${ROLE_NAMES[SESSION.role]}</td><td>${pay?pay.name:"—"}</td><td>${s.items.length}</td><td>${sum} ₽</td>
+        <td><button class="btn gray" onclick="printSale(${s.id})">Чек</button></td></tr>`;
+    }).join("")}
+    </table></div>`;
+}
+function openSaleForm() {
+  showModal(`<h3>Новая продажа</h3>
+    <label>Способ оплаты</label><select id="s_pay">${DB.payments.map(p=>`<option value="${p.id}">${p.name}</option>`).join("")}</select>
+    <label>Дата</label><input id="s_date" type="date" value="${new Date().toISOString().slice(0,10)}">
+    <label>Товары (списание по FEFO)</label>
+    <table class="items-table" id="s_itemsTable">
+      <thead><tr><th>Товар</th><th>Кол-во</th><th>Цена</th><th>Сумма</th><th></th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <button class="btn gray add-line-btn" onclick="addSaleLine()">+ Добавить строку</button>
+    <div class="actions"><button class="btn gray" onclick="closeModal()">Отмена</button>
+    <button class="btn green" onclick="saveSale()">Провести</button></div>`);
+  addSaleLine();
+}
+function addSaleLine() {
+  const tbody = document.querySelector("#s_itemsTable tbody");
+  const tr = document.createElement("tr");
+  const inStock = DB.products.filter(p => !p.deleted && getStock(p.id) > 0);
+  const list = inStock.length ? inStock : DB.products.filter(p=>!p.deleted);
+  if (!list.length) { alert("Нет доступных товаров"); return; }
+  tr.innerHTML = `
+    <td><select class="item-select" onchange="onSaleItemChange(this)">
+      ${list.map(p=>`<option value="${p.id}" data-sell="${p.sell}">${p.name} (ост. ${getStock(p.id)})</option>`).join("")}
+    </select></td>
+    <td><input class="qty-input" type="number" value="1" min="1" onchange="recalcSaleRow(this)"></td>
+    <td><input class="qty-input" type="number" step="0.01" value="${list[0]?.sell||0}" onchange="recalcSaleRow(this)"></td>
+    <td class="price-cell">0 ₽</td>
+    <td><button class="btn red" style="padding:3px 8px;font-size:11px" onclick="this.closest('tr').remove()">×</button></td>
+  `;
+  tbody.appendChild(tr);
+  recalcSaleRow(tr.querySelector(".qty-input"));
+}
+function onSaleItemChange(select) {
+  const tr = select.closest("tr");
+  const sell = select.options[select.selectedIndex].dataset.sell;
+  tr.querySelectorAll(".qty-input")[1].value = sell;
+  recalcSaleRow(tr.querySelector(".qty-input"));
+}
+function recalcSaleRow(el) {
+  const tr = el.closest("tr");
+  const inputs = tr.querySelectorAll(".qty-input");
+  const qty = parseFloat(inputs[0].value) || 0;
+  const price = parseFloat(inputs[1].value) || 0;
+  tr.querySelector(".price-cell").textContent = (qty*price) + " ₽";
+}
+function saveSale() {
+  const paymentId = +document.getElementById("s_pay").value;
+  const date = document.getElementById("s_date").value;
+  const rows = document.querySelectorAll("#s_itemsTable tbody tr");
+  const items = [];
+  const plans = [];
+  for (const tr of rows) {
+    const pid = +tr.querySelector(".item-select").value;
+    const inputs = tr.querySelectorAll(".qty-input");
+    const qty = parseFloat(inputs[0].value) || 0;
+    const price = parseFloat(inputs[1].value) || 0;
+    if (pid && qty > 0) {
+      const plan = planFEFO(pid, qty);
+      if (!plan) {
+        const p = DB.products.find(x=>x.id===pid);
+        alert("Недостаточно товара: " + (p?p.name:"?") + " (остаток " + getStock(pid) + ")");
+        return;
+      }
+      plans.push(...plan);
+      items.push({productId:pid, qty, price});
+    }
+  }
+  if (!items.length) { alert("Добавьте хотя бы один товар"); return; }
+  const id = Math.max(0,...DB.sales.map(s=>s.id))+1;
+  DB.sales.push({id, sellerId:1, paymentId, date, num:"ЧК-"+String(id).padStart(3,"0"), items});
+  plans.forEach(pl => {
+    const b = DB.batches.find(x=>x.id===pl.batchId);
+    if (b) b.qty -= pl.qty;
+  });
+  saveDB(); closeModal(); render();
+}
+function printSale(id) {
+  const s = DB.sales.find(x=>x.id===id);
+  const pay = DB.payments.find(p=>p.id===s.paymentId);
+  const sum = s.items.reduce((a,i)=>a+i.qty*i.price,0);
+  let rows = s.items.map(i=>{
+    const p = DB.products.find(x=>x.id===i.productId);
+    return `<tr><td>${p?p.name:"?"}</td><td>${i.qty}</td><td>${i.price}</td><td>${i.qty*i.price}</td></tr>`;
+  }).join("");
+  showModal(`<div class="print-doc"><h2>Товарный чек ${s.num}</h2>
+    <div class="meta"><span>Дата: ${s.date}</span><span>Оплата: ${pay?pay.name:"—"}</span></div>
+    <table><tr><th>Товар</th><th>Кол-во</th><th>Цена</th><th>Сумма</th></tr>${rows}</table>
+    <div class="total">Итого: ${sum} ₽</div></div>
+    <div class="actions no-print"><button class="btn gray" onclick="closeModal()">Закрыть</button>
+    <button class="btn" onclick="window.print()">Печать</button></div>`);
+}
+
+/* ==================== ОСТАТКИ (ПАРТИИ) ==================== */
+function renderStock(c) {
+  let html = `<h1>Остатки по партиям</h1>
+    <p style="margin-bottom:12px; color:#7a4a5c; font-size:13px">
+      Каждая партия — отдельная строка. Списание при продаже: FEFO (первым истекает — первым уходит).
+    </p>
+    <div class="card"><table>
+    <tr><th>Товар</th><th>Партия (№ прихода)</th><th>Остаток</th><th>Срок годности</th><th>Статус</th></tr>`;
+  const today = new Date(); today.setHours(0,0,0,0);
+  let rows = 0;
+  DB.products.filter(p=>!p.deleted).forEach(p => {
+    const batches = DB.batches.filter(b=>b.productId===p.id && b.qty>0)
+      .sort((a,b)=>new Date(a.exp)-new Date(b.exp));
+    if (!batches.length) {
+      html += `<tr><td>${p.name}</td><td class="empty">нет партий</td><td>0</td><td>—</td>
+        <td><span class="status st-out">Отсутствует</span></td></tr>`;
+      rows++;
+      return;
+    }
+    batches.forEach(b => {
+      const d = new Date(b.exp);
+      const expired = d < today;
+      html += `<tr><td>${p.name}</td><td>${b.receiptNum}</td><td>${b.qty}</td><td>${b.exp}</td>
+        <td>${expired?'<span class="status st-exp">Просрочена</span>':'<span class="status st-active">Годна</span>'}</td></tr>`;
+      rows++;
+    });
+  });
+  if (!rows) html += `<tr><td colspan="5" class="empty">Нет остатков</td></tr>`;
+  html += `</table></div>`;
+  c.innerHTML = html;
+}
+
+/* ==================== ПОДБОР ==================== */
+function renderSelection(c) {
+  c.innerHTML = `<h1>Подбор товаров по критериям</h1><div class="card">
+    <div class="toolbar">
+      <input id="sel_name" placeholder="Наименование">
+      <select id="sel_cat"><option value="">Все категории</option>${DB.categories.map(c2=>`<option value="${c2.id}">${c2.name}</option>`).join("")}</select>
+      <input id="sel_min" type="number" placeholder="Цена от">
+      <input id="sel_max" type="number" placeholder="Цена до">
+      <button class="btn" onclick="doSelect()">Подобрать</button>
+      <button class="btn gray" onclick="window.print()">Печать</button>
+    </div>
+    <div id="selResult"><div class="empty">Задайте критерии и нажмите «Подобрать»</div></div>
+  </div>`;
+}
+function doSelect() {
+  const name = document.getElementById("sel_name").value.toLowerCase();
+  const catId = document.getElementById("sel_cat").value;
+  const min = +document.getElementById("sel_min").value || 0;
+  const max = +document.getElementById("sel_max").value || Infinity;
+  let list = DB.products.filter(p => {
+    if (p.deleted) return false;
+    if (name && !p.name.toLowerCase().includes(name)) return false;
+    if (catId) {
+      const sc = DB.subcategories.find(s=>s.id===p.subcatId);
+      if (!sc || sc.catId != catId) return false;
+    }
+    if (p.sell < min || p.sell > max) return false;
+    return true;
+  });
+  let html = `<table><tr><th>Товар</th><th>Цена</th><th>Остаток</th><th>Статус</th></tr>`;
+  if (!list.length) html += `<tr><td colspan="4" class="empty">Ничего не найдено</td></tr>`;
+  list.forEach(p => {
+    const auto = getAutoStatus(p);
+    html += `<tr><td>${p.name}</td><td>${p.sell} ₽</td><td>${getStock(p.id)}</td>
+      <td><span class="status ${auto.cls}">${auto.name}</span></td></tr>`;
+  });
+  html += `</table>`;
+  document.getElementById("selResult").innerHTML = html;
+}
+
+/* ==================== ОТЧЕТЫ ==================== */
+function renderReports(c) {
+  c.innerHTML = `<h1>Отчеты</h1><div class="card">
+    <div class="toolbar">
+      <select id="repType">
+        <option value="products">Отчет по товарам</option>
+        <option value="stock">Отчет по остаткам</option>
+        <option value="batches">Отчет по партиям и срокам</option>
+        <option value="sales">Отчет по продажам</option>
+        <option value="receipts">Отчет по поступлениям</option>
+        <option value="sellers">Эффективность продавцов</option>
+        <option value="suppliers">Отчет по поставщикам</option>
+        <option value="expiry">Отчет по срокам годности (60 дней)</option>
+        <option value="expired">Отчет по просроченным партиям</option>
+        <option value="low">Низкие остатки</option>
+        <option value="categories">Сводный по категориям</option>
+        <option value="movement">Движение товаров</option>
+        <option value="profit">Прибыль</option>
+        <option value="avgcheck">Средний чек</option>
+        <option value="archive">Корзина</option>
+      </select>
+      <button class="btn" onclick="runReport()">Сформировать</button>
+      <button class="btn gray" onclick="window.print()">Печать / PDF</button>
+    </div>
+    <div id="repResult"><div class="empty">Выберите отчет и нажмите «Сформировать»</div></div>
+  </div>`;
+}
+function runReport() {
+  const t = document.getElementById("repType").value;
+  const r = document.getElementById("repResult");
+  let html = "";
+  let chart = "";
+  const today = new Date(); today.setHours(0,0,0,0);
+
+  if (t === "products") {
+    html = `<table><tr><th>Товар</th><th>Цена продажи</th><th>Остаток</th><th>Партий</th><th>Статус</th></tr>`;
+    const statusCount = { "В наличии":0, "Отсутствует":0, "Просрочен":0, "Снят с продажи":0 };
+    DB.products.filter(p=>!p.deleted).forEach(p => {
+      const auto = getAutoStatus(p);
+      const batches = DB.batches.filter(b=>b.productId===p.id && b.qty>0).length;
+      html += `<tr><td>${p.name}</td><td>${p.sell} ₽</td><td>${getStock(p.id)}</td><td>${batches}</td>
+        <td><span class="status ${auto.cls}">${auto.name}</span></td></tr>`;
+      statusCount[auto.name] = (statusCount[auto.name]||0) + 1;
+    });
+    html += `</table>`;
+    chart = drawPie("Товары по статусам", Object.entries(statusCount).filter(([k,v])=>v>0));
+  }
+  else if (t === "stock") {
+    html = `<table><tr><th>Товар</th><th>Остаток</th><th>Мин. остаток</th><th>Статус</th></tr>`;
+    const top = [];
+    DB.products.filter(p=>!p.deleted).forEach(p => {
+      const stock = getStock(p.id);
+      const low = stock < p.minStock;
+      const auto = getAutoStatus(p);
+      html += `<tr><td>${p.name}</td><td class="${low?'low':''}">${stock}</td><td>${p.minStock}</td>
+        <td><span class="status ${auto.cls}">${auto.name}</span></td></tr>`;
+      top.push({label:p.name, value:stock});
+    });
+    html += `</table>`;
+    top.sort((a,b)=>b.value-a.value);
+    chart = drawBars("Топ-10 товаров по остатку", top.slice(0,10));
+  }
+  else if (t === "batches") {
+    html = `<table><tr><th>Товар</th><th>Партия</th><th>Остаток</th><th>Срок годн.</th><th>Статус</th></tr>`;
+    const byExp = {};
+    DB.batches.filter(b=>b.qty>0).forEach(b => {
+      const p = DB.products.find(x=>x.id===b.productId);
+      const expired = new Date(b.exp) < today;
+      html += `<tr><td>${p?p.name:"?"}</td><td>${b.receiptNum}</td><td>${b.qty}</td><td>${b.exp}</td>
+        <td>${expired?'<span class="status st-exp">Просрочена</span>':'<span class="status st-active">Годна</span>'}</td></tr>`;
+      byExp[b.exp] = (byExp[b.exp]||0) + b.qty;
+    });
+    html += `</table>`;
+    chart = drawBars("Остатки по датам истечения", Object.entries(byExp).sort().map(([k,v])=>({label:k, value:v})));
+  }
+  else if (t === "sales") {
+    const total = DB.sales.reduce((a,s)=>a+s.items.reduce((x,i)=>x+i.qty*i.price,0),0);
+    const qty = DB.sales.reduce((a,s)=>a+s.items.reduce((x,i)=>x+i.qty,0),0);
+    html = `<p><b>Всего продаж:</b> ${DB.sales.length}, <b>Выручка:</b> ${total} ₽, <b>Единиц:</b> ${qty}</p>`;
+    html += `<table><tr><th>Чек</th><th>Дата</th><th>Позиций</th><th>Сумма</th></tr>`;
+    const byDay = {};
+    DB.sales.forEach(s => {
+      const sum = s.items.reduce((a,i)=>a+i.qty*i.price,0);
+      html += `<tr><td>${s.num}</td><td>${s.date}</td><td>${s.items.length}</td><td>${sum} ₽</td></tr>`;
+      byDay[s.date] = (byDay[s.date]||0) + sum;
+    });
+    html += `</table>`;
+    chart = drawBars("Выручка по дням", Object.entries(byDay).sort().map(([k,v])=>({label:k, value:v})));
+  }
+  else if (t === "receipts") {
+    const total = DB.receipts.reduce((a,r2)=>a+r2.items.reduce((x,i)=>x+i.qty*i.price,0),0);
+    html = `<p><b>Накладных:</b> ${DB.receipts.length}, <b>Сумма:</b> ${total} ₽</p>`;
+    html += `<table><tr><th>Накладная</th><th>Дата</th><th>Поставщик</th><th>Сумма</th></tr>`;
+    const bySup = {};
+    DB.receipts.forEach(r2 => {
+      const s = DB.suppliers.find(x=>x.id===r2.supplierId);
+      const sum = r2.items.reduce((a,i)=>a+i.qty*i.price,0);
+      html += `<tr><td>${r2.num}</td><td>${r2.date}</td><td>${s?s.name:"—"}</td><td>${sum} ₽</td></tr>`;
+      bySup[s?s.name:"?"] = (bySup[s?s.name:"?"]||0) + sum;
+    });
+    html += `</table>`;
+    chart = drawBars("Сумма приходов по поставщикам", Object.entries(bySup).map(([k,v])=>({label:k, value:v})));
+  }
+  else if (t === "sellers") {
+    const total = DB.sales.reduce((a,s)=>a+s.items.reduce((x,i)=>x+i.qty*i.price,0),0);
+    const avg = DB.sales.length ? (total/DB.sales.length).toFixed(0) : 0;
+    html = `<table><tr><th>Продавец</th><th>Продаж</th><th>Выручка</th><th>Средний чек</th></tr>
+      <tr><td>${ROLE_NAMES[SESSION.role]}</td><td>${DB.sales.length}</td><td>${total} ₽</td><td>${avg} ₽</td></tr></table>`;
+    chart = drawBars("Выручка продавца", [{label:ROLE_NAMES[SESSION.role], value:total}]);
+  }
+  else if (t === "suppliers") {
+    html = `<table><tr><th>Поставщик</th><th>Подкатегория</th><th>Накладных</th><th>Позиций</th><th>Сумма</th></tr>`;
+    const data = [];
+    DB.suppliers.forEach(s => {
+      const rs = DB.receipts.filter(r2=>r2.supplierId===s.id);
+      const sum = rs.reduce((a,r2)=>a+r2.items.reduce((x,i)=>x+i.qty*i.price,0),0);
+      const pos = rs.reduce((a,r2)=>a+r2.items.length,0);
+      const sc = DB.subcategories.find(x=>x.id===s.subcatId);
+      html += `<tr><td>${s.name}</td><td>${sc?sc.name:"—"}</td><td>${rs.length}</td><td>${pos}</td><td>${sum} ₽</td></tr>`;
+      data.push({label:s.name, value:sum});
+    });
+    html += `</table>`;
+    chart = drawBars("Сумма поставок по поставщикам", data);
+  }
+  else if (t === "expiry") {
+    html = `<p><b>Партии, у которых срок годности истекает в ближайшие 60 дней:</b></p>`;
+    html += `<table><tr><th>Товар</th><th>Партия</th><th>Остаток</th><th>Срок годн.</th><th>Дней</th></tr>`;
+    let found = false;
+    const data = [];
+    DB.batches.filter(b=>b.qty>0).forEach(b => {
+      const d = Math.ceil((new Date(b.exp) - today) / 86400000);
+      if (d < 60) {
+        found = true;
+        const p = DB.products.find(x=>x.id===b.productId);
+        html += `<tr><td>${p?p.name:"?"}</td><td>${b.receiptNum}</td><td>${b.qty}</td><td>${b.exp}</td>
+          <td class="${d<0?'low':''}">${d}</td></tr>`;
+        data.push({label:(p?p.name:"?")+" ("+b.exp+")", value:b.qty});
+      }
+    });
+    if (!found) html += `<tr><td colspan="5" class="empty">Нет партий с истекающим сроком</td></tr>`;
+    html += `</table>`;
+    if (data.length) chart = drawBars("Скоро истекают (остаток)", data);
+  }
+  else if (t === "expired") {
+    html = `<p><b>Просроченные партии с остатком:</b></p>`;
+    html += `<table><tr><th>Товар</th><th>Партия</th><th>Остаток</th><th>Срок годн.</th></tr>`;
+    let found = false;
+    const data = [];
+    DB.batches.filter(b=>b.qty>0).forEach(b => {
+      if (new Date(b.exp) < today) {
+        found = true;
+        const p = DB.products.find(x=>x.id===b.productId);
+        html += `<tr><td>${p?p.name:"?"}</td><td>${b.receiptNum}</td><td class="low">${b.qty}</td><td>${b.exp}</td></tr>`;
+        data.push([p?p.name:"?", b.qty]);
+      }
+    });
+    if (!found) html += `<tr><td colspan="4" class="empty">Просроченных партий нет</td></tr>`;
+    html += `</table>`;
+    if (data.length) chart = drawPie("Просрочено по товарам", data);
+  }
+  else if (t === "low") {
+    html = `<p><b>Товары с остатком ниже минимального:</b></p>`;
+    html += `<table><tr><th>Товар</th><th>Остаток</th><th>Мин.</th><th>Не хватает</th></tr>`;
+    let found = false;
+    const data = [];
+    DB.products.filter(p=>!p.deleted).forEach(p => {
+      const stock = getStock(p.id);
+      if (stock < p.minStock) {
+        found = true;
+        html += `<tr><td>${p.name}</td><td class="low">${stock}</td><td>${p.minStock}</td><td class="low">${p.minStock-stock}</td></tr>`;
+        data.push({label:p.name, value:p.minStock-stock});
+      }
+    });
+    if (!found) html += `<tr><td colspan="4" class="empty">Все товары в норме</td></tr>`;
+    html += `</table>`;
+    if (data.length) chart = drawBars("Не хватает (ед.)", data);
+  }
+  else if (t === "categories") {
+    html = `<table><tr><th>Категория</th><th>Товаров</th><th>Остаток</th><th>Продано</th><th>Выручка</th></tr>`;
+    const revData = [];
+    DB.categories.forEach(c2 => {
+      const subs = DB.subcategories.filter(s=>s.catId===c2.id).map(s=>s.id);
+      const prods = DB.products.filter(p=>!p.deleted && subs.includes(p.subcatId));
+      const prodIds = prods.map(p=>p.id);
+      const stock = prods.reduce((a,p)=>a+getStock(p.id),0);
+      let sold = 0, revenue = 0;
+      DB.sales.forEach(s => s.items.forEach(i => {
+        if (prodIds.includes(i.productId)) { sold += i.qty; revenue += i.qty*i.price; }
+      }));
+      html += `<tr><td>${c2.name}</td><td>${prods.length}</td><td>${stock}</td><td>${sold}</td><td>${revenue} ₽</td></tr>`;
+      revData.push({label:c2.name, value:revenue});
+    });
+    html += `</table>`;
+    chart = drawBars("Выручка по категориям", revData);
+  }
+  else if (t === "movement") {
+    html = `<table><tr><th>Товар</th><th>Приход</th><th>Расход</th><th>Остаток</th></tr>`;
+    const data = [];
+    DB.products.forEach(p => {
+      const prihod = DB.receipts.reduce((a,r2)=>a+r2.items.filter(i=>i.productId===p.id).reduce((x,i)=>x+i.qty,0),0);
+      const rashod = DB.sales.reduce((a,s)=>a+s.items.filter(i=>i.productId===p.id).reduce((x,i)=>x+i.qty,0),0);
+      html += `<tr><td>${p.name}${p.deleted?' (корзина)':''}</td><td>${prihod}</td><td>${rashod}</td><td>${getStock(p.id)}</td></tr>`;
+      if (prihod > 0 || rashod > 0) data.push({label:p.name, value:rashod});
+    });
+    html += `</table>`;
+    chart = drawBars("Расход (продано) по товарам", data);
+  }
+  else if (t === "profit") {
+    let totalRevenue = 0, totalCost = 0;
+    html = `<table><tr><th>Товар</th><th>Продано</th><th>Выручка</th><th>Закупка</th><th>Прибыль</th></tr>`;
+    const data = [];
+    DB.products.forEach(p => {
+      let qty = 0, revenue = 0;
+      DB.sales.forEach(s => s.items.forEach(i => {
+        if (i.productId === p.id) { qty += i.qty; revenue += i.qty*i.price; }
+      }));
+      const cost = qty * p.buy;
+      const profit = revenue - cost;
+      totalRevenue += revenue;
+      totalCost += cost;
+      if (qty > 0) {
+        html += `<tr><td>${p.name}${p.deleted?' (корзина)':''}</td><td>${qty}</td><td>${revenue} ₽</td><td>${cost} ₽</td>
+          <td class="${profit>=0?'':'low'}">${profit} ₽</td></tr>`;
+        data.push({label:p.name, value:profit});
+      }
+    });
+    html += `</table>`;
+    html += `<p style="margin-top:12px"><b>Итого выручка:</b> ${totalRevenue} ₽, 
+      <b>Закупка:</b> ${totalCost} ₽, <b>Прибыль:</b> ${totalRevenue-totalCost} ₽</p>`;
+    if (data.length) chart = drawBars("Прибыль по товарам", data);
+  }
+  else if (t === "avgcheck") {
+    const total = DB.sales.reduce((a,s)=>a+s.items.reduce((x,i)=>x+i.qty*i.price,0),0);
+    const avg = DB.sales.length ? (total/DB.sales.length).toFixed(0) : 0;
+    const max = DB.sales.length ? Math.max(...DB.sales.map(s=>s.items.reduce((a,i)=>a+i.qty*i.price,0))) : 0;
+    const min = DB.sales.length ? Math.min(...DB.sales.map(s=>s.items.reduce((a,i)=>a+i.qty*i.price,0))) : 0;
+    html = `<div class="row">
+      <div class="col stat-box"><div class="num">${DB.sales.length}</div><div class="lbl">Чеков</div></div>
+      <div class="col stat-box"><div class="num">${avg} ₽</div><div class="lbl">Средний чек</div></div>
+      <div class="col stat-box"><div class="num">${max} ₽</div><div class="lbl">Максимальный</div></div>
+      <div class="col stat-box"><div class="num">${min} ₽</div><div class="lbl">Минимальный</div></div>
+    </div>`;
+    html += `<table style="margin-top:14px"><tr><th>Чек</th><th>Дата</th><th>Позиций</th><th>Сумма</th></tr>`;
+    const data = [];
+    DB.sales.forEach(s => {
+      const sum = s.items.reduce((a,i)=>a+i.qty*i.price,0);
+      html += `<tr><td>${s.num}</td><td>${s.date}</td><td>${s.items.length}</td><td>${sum} ₽</td></tr>`;
+      data.push({label:s.num, value:sum});
+    });
+    html += `</table>`;
+    if (data.length) chart = drawBars("Сумма по чекам", data);
+  }
+  else if (t === "archive") {
+    const deleted = DB.products.filter(p=>p.deleted);
+    html = `<p><b>Товаров в корзине:</b> ${deleted.length}</p>`;
+    html += `<table><tr><th>ID</th><th>Наименование</th><th>Подкатегория</th><th>Цена</th><th>Остаток</th></tr>`;
+    deleted.forEach(p => {
+      const sc = DB.subcategories.find(x=>x.id===p.subcatId);
+      html += `<tr><td>${p.id}</td><td>${p.name}</td><td>${sc?sc.name:"—"}</td><td>${p.sell} ₽</td><td>${getStock(p.id)}</td></tr>`;
+    });
+    html += `</table>`;
+    if (deleted.length) chart = drawBars("Товары в корзине (остаток)", deleted.map(p=>({label:p.name, value:getStock(p.id)})));
+  }
+
+  r.innerHTML = html + chart;
+}
+
+/* ==================== ДИАГРАММЫ ==================== */
+function drawBars(title, data) {
+  if (!data || !data.length) return "";
+  const max = Math.max(...data.map(d=>d.value)) || 1;
+  let bars = "";
+  data.forEach((d, i) => {
+    const h = Math.max(4, Math.round((d.value / max) * 180));
+    const delay = i * 0.06;
+    bars += `<div class="bar-wrap">
+      <div class="bar-val" style="animation-delay:${0.6+delay}s">${d.value}</div>
+      <div class="bar" style="height:${h}px; animation-delay:${delay}s"></div>
+      <div class="bar-lbl">${d.label}</div>
+    </div>`;
+  });
+  return `<div class="chart-box">
+    <div class="chart-title">${title}</div>
+    <div class="bars">${bars}</div>
+  </div>`;
+}
+
+function drawPie(title, data) {
+  if (!data || !data.length) return "";
+  const colors = ["#e75480", "#f4a7c0", "#d6336c", "#ff9ec0", "#a8325f", "#ffd1e0", "#c98aa3", "#9e2a4d"];
+  const total = data.reduce((a,[,v])=>a+v, 0) || 1;
+  let startAngle = -Math.PI/2;
+  const cx = 120, cy = 120, r = 100;
+  let slices = "";
+  let legend = "";
+  data.forEach(([label, value], i) => {
+    const angle = (value / total) * Math.PI * 2;
+    const endAngle = startAngle + angle;
+    const x1 = cx + r * Math.cos(startAngle);
+    const y1 = cy + r * Math.sin(startAngle);
+    const x2 = cx + r * Math.cos(endAngle);
+    const y2 = cy + r * Math.sin(endAngle);
+    const largeArc = angle > Math.PI ? 1 : 0;
+    const color = colors[i % colors.length];
+    const delay = i * 0.1;
+    if (data.length === 1) {
+      slices += `<circle class="pie-slice" cx="${cx}" cy="${cy}" r="${r}" fill="${color}" style="animation-delay:${delay}s"/>`;
+    } else {
+      slices += `<path class="pie-slice" d="M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 ${largeArc} 1 ${x2} ${y2} Z" fill="${color}" style="animation-delay:${delay}s"/>`;
+    }
+    const pct = ((value/total)*100).toFixed(1);
+    legend += `<div class="legend-item" style="animation-delay:${delay}s">
+      <div class="legend-dot" style="background:${color}"></div>
+      <div>${label}</div>
+      <div class="legend-val">${value} (${pct}%)</div>
+    </div>`;
+    startAngle = endAngle;
+  });
+  return `<div class="chart-box">
+    <div class="chart-title">${title}</div>
+    <div class="pie-wrap">
+      <svg class="pie-svg" width="240" height="240" viewBox="0 0 240 240">${slices}</svg>
+      <div class="legend">${legend}</div>
+    </div>
+  </div>`;
+}
+
+/* ==================== МОДАЛКА ==================== */
+function showModal(html) {
+  document.getElementById("modalBox").innerHTML = html;
+  document.getElementById("modalBg").classList.add("show");
+}
+function closeModal() { document.getElementById("modalBg").classList.remove("show"); }
+
+document.getElementById("loginPass").addEventListener("keydown", e => { if (e.key === "Enter") doLogin(); });
+</script>
+</body>
+</html>
